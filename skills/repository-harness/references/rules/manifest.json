@@ -3,8 +3,8 @@
   "source": "docs/",
   "files": {
     "main.md": {
-      "source_sha256": "85be032f25eb88d3431fe53b8d89f1f3fdb9e121ed1e463262321651b7401ad4",
-      "bundled_sha256": "6ba028a044364cf0131fdc7d0e56ccf70dc0e3576e29c7719cf50d3d184a1f91"
+      "source_sha256": "49a969be634606725f2afc44dcaa50650d50cc62a11bd5b808f0ede3c6827210",
+      "bundled_sha256": "7da232ee10943391a5e27eb5fc92e55cc8b8623188ecbf2bb5b1ab1f7d665398"
     },
     "code-base.md": {
       "source_sha256": "7fca3ff0627f2f698f4e2f84999ea47ace79111ae5ccd0447565cbda09eadfc9",
@@ -39,12 +39,12 @@
       "bundled_sha256": "bc3a275f4a90c6d206d83125284ece14386293ff16f73c02b0350f56ef8c10b5"
     },
     "codex-subscription.md": {
-      "source_sha256": "6beb653f719612ebc31ef0f0844e48e039b9d8d339eb91cfddc41faad1ff1a89",
-      "bundled_sha256": "9517f94065536e5679619f43efaef006f9eb4b45ba24576995e58171a5fad2b7"
+      "source_sha256": "b200b810c6a472b26331a53bee6447b68978414f5e5038bcedb04ad9e2c1578a",
+      "bundled_sha256": "685f955d2d7172d7b3d925b9c8081b66823ca48723d803106e4d900388bbcccb"
     },
     "evaluation.md": {
-      "source_sha256": "ad5c8d788013efc9a6c7a391448a3f61b5457935ae3058c7665e9dc47a1c53fd",
-      "bundled_sha256": "f2520b63cbe8ef9f238ad386ce67bc85ddca62fcd6af1b1fc83af7e7842edc17"
+      "source_sha256": "76f3265468d1447451d9b5e6c0c782bdfa442c7ebe8f7bba816e47b8dc0f8681",
+      "bundled_sha256": "8919719c58e860cc3b457e31bfc0e4c4f53465055463bbf4d05c0c77bdb76cf6"
     }
   }
 }
