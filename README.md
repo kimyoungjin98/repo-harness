@@ -81,6 +81,14 @@ node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notifi
 
 본문 작성, 사용자 지정 환경변수, 실패 처리는 [알림 사용법](./docs/notifications.md) 참고. 설정 검사와 실제 수신 성공은 구분한다.
 
+## Codex 구독 계정의 이슈·PR 자동화
+
+OpenAI API 키 없이 구독으로 로그인한 Codex CLI를 사용하는 [재사용 템플릿](./skills/repository-harness/assets/codex-subscription/)을 포함한다. 비공개 GitHub 저장소와 로그인 정보를 유지하는 전용 Linux self-hosted runner가 필요하며, 공개 저장소에서는 실행하지 않는다.
+
+이슈 작성 시 구현·검증 후 PR을 만들고, 생성된 PR에 `/codex 수정 요청`을 남기면 같은 PR에 커밋을 추가한다. 쓰기 권한 사용자의 요청만 실행하며 PR 알림은 기존 Discord·Slack 설정을 사용한다.
+
+배치할 파일, 러너 로그인, GitHub Variables·Secrets와 적용 검증은 [구독 자동화 사용법](./docs/codex-subscription.md) 참고. 스킬 설치만으로 자동 실행되지는 않으며, 자동화 구성을 요청한 프로젝트에만 템플릿을 적용한다.
+
 ## 기획과 스킬 수정
 
 - 기획·규칙 원본 : [docs/main.md](./docs/main.md)와 `docs/`의 관련 문서
@@ -94,6 +102,7 @@ node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notifi
 python3 scripts/build_skill.py
 python3 scripts/build_skill.py --check
 node tests/notify.test.mjs
+node --test tests/codex-subscription.test.mjs
 ```
 
 `docs/`와 생성된 규칙을 함께 커밋하여 원격 저장소에 반영한다. 설치 시 빌드를 실행하지 않으므로 생성 파일도 저장소에 포함해야 한다.

@@ -19,6 +19,7 @@ SOURCES = (
     "git-branch.md",
     "document-write.md",
     "notifications.md",
+    "codex-subscription.md",
     "evaluation.md",
 )
 OUTPUT = ROOT / "skills/repository-harness/references/rules"
