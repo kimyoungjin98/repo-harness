@@ -47,6 +47,8 @@ npx skills use kimyoungjin98/repo-harness --skill repository-harness --agent cod
 
 ## 갱신
 
+공통 규칙은 `docs/harness/`에 한 벌만 두고 프로젝트별 차이는 `overrides/`와 `project.md`에 기록한다. `.harness-state/state.json`에는 경로와 해시만 저장하며 `baseline/`과 `agents-block.md`는 생성하지 않는다.
+
 설치한 스킬을 갱신한 뒤 에이전트에게 기존 하네스 갱신을 요청한다.
 
 ```bash
@@ -56,6 +58,8 @@ npx skills update
 ```text
 $repository-harness 최신 규칙으로 하네스를 갱신하고 프로젝트별 수정은 유지해줘.
 ```
+
+구형 설치는 프로젝트별 수정 보존을 확인한 뒤 기준 사본을 제거하는 구조로 전환한다. 스킬 업데이트만으로 대상 프로젝트의 기존 파일이 변경되는 것은 아니다.
 
 ## 기획과 스킬 수정
 
