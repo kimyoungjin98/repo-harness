@@ -2,6 +2,7 @@
 
 ## 기존 설치 찾기
 
+- 구성·갱신 전에 [워크플로우](./rules/main.md)의 필수 Git·Webhook 연동 조건을 확인. 미준비·미확인이면 기존 파일과 상태를 보존하고 준비 대기로 보고
 - 대상 `AGENTS.md`의 하네스 연결 블록에서 `project.md` 위치를 먼저 확인. 연결이 없으면 기본 위치인 `docs/harness/project.md` 확인
 - 명시적인 외부 원본 지정이 있으면 `external` 모드로 사용. 사용자가 기본 포함 규칙 사용을 요청하면 `bundled` 모드로 전환
 - 지정이 없고 기존 설정의 `source_mode`가 `external`이면 `project.md`의 경로와 상태 파일의 `source_dir`를 확인. 명시적으로 선택한 외부 원본이 없으면 다른 원본으로 바꾸지 말고 필요한 경로만 확인
