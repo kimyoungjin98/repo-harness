@@ -51,32 +51,70 @@ const prReport = {
 };
 
 test("PR message identifies repository and separates changes, checks, review, remaining", () => {
-  assert.equal(formatPrMessage(prReport), `[PR 생성] team/shopping-tool #1
-제목: 레포지토리 하네스 구성
-브랜치: feature/configure-harness → main
-링크: https://github.com/team/shopping-tool/pull/1
+  assert.equal(formatPrMessage(prReport), `**[PR 생성] team/shopping-tool #1**
+레포지토리 하네스 구성
 
-변경
+브랜치: feature/configure-harness → main
+PR 링크: https://github.com/team/shopping-tool/pull/1
+
+**변경**
 - AGENTS.md에 하네스 규칙 연결
 - PR 알림 스크립트 추가
 
-검증
-- [통과] 문서 링크 — 관련 링크 12개 확인
-- [미실행] Webhook 수신 — 실제 전송 요청이 없어 미실행
-- [비적용] 앱 테스트 — 앱 코드 변경 없음
+**검증**
+- [통과] 문서 링크
+  관련 링크 12개 확인
 
-리뷰할 부분
+- [미실행] Webhook 수신
+  실제 전송 요청이 없어 미실행
+
+- [비적용] 앱 테스트
+  앱 코드 변경 없음
+
+**리뷰할 부분**
 - 프로젝트의 기준 브랜치와 실제 검증 명령 확인
 
-남은 작업
+**남은 작업**
 - 실제 Webhook 수신 검증`);
   const updated = structuredClone(prReport);
   updated.action = "updated";
   updated.remaining = [];
   updated.checks.push({ name: "추가 테스트", status: "failed", detail: "원인 확인 필요" });
-  assert.match(formatPrMessage(updated), /^\[PR 갱신\]/);
+  assert.match(formatPrMessage(updated), /^\*\*\[PR 갱신\]/);
   assert.match(formatPrMessage(updated), /\[실패\] 추가 테스트/);
-  assert.match(formatPrMessage(updated), /남은 작업\n- 없음$/);
+  assert.match(formatPrMessage(updated), /남은 작업\*\*\n- 없음$/);
+});
+
+test("PR multiline paragraphs survive preview and JSON delivery for Discord and Slack", async () => {
+  const report = structuredClone(prReport);
+  report.summary = ["첫 번째 변경\r\n  이어지는 설명\n\n다음 문단", "두 번째 변경"];
+  report.checks[0].detail = "명령 실행 완료\r\n12개 링크 확인";
+  report.review = ["설정 확인\n프로젝트 기준과 비교"];
+  report.remaining = ["수신 검증\n요청 후 실행"];
+  const dir = await mkdtemp(join(tmpdir(), "notify-pr-lines-"));
+  try {
+    const path = join(dir, "pr.json");
+    await writeFile(path, JSON.stringify(report));
+    for (const provider of ["discord", "slack"]) {
+      const preview = await run(["--provider", provider, "--pr-file", path, "--preview"]);
+      const emphasis = provider === "discord" ? "**" : "*";
+      assert.ok(preview.includes(`${emphasis}검증${emphasis}\n`));
+      assert.ok(preview.includes("- 첫 번째 변경\n  이어지는 설명\n\n  다음 문단\n- 두 번째 변경"));
+      assert.ok(preview.includes("- [통과] 문서 링크\n  명령 실행 완료\n  12개 링크 확인\n\n- [미실행]"));
+      assert.ok(preview.includes("- 설정 확인\n  프로젝트 기준과 비교"));
+      assert.ok(preview.includes("- 수신 검증\n  요청 후 실행"));
+      assert.equal(preview.includes("\\n"), false);
+      assert.equal(preview.includes("\r"), false);
+      const result = await run(["--provider", provider, "--pr-file", path], {
+        env, fetchImpl: async (_url, options) => {
+          const payload = JSON.parse(options.body);
+          assert.equal(payload[provider === "discord" ? "content" : "text"], preview);
+          return new Response(provider === "discord" ? '{"id":"987"}' : "ok", { status: 200 });
+        },
+      });
+      assert.equal(result.sent, true);
+    }
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
 test("PR message rejects missing context and invalid checks without exposing supplied values", () => {

@@ -41,6 +41,11 @@ PR 생성·갱신 후 아래 정보를 UTF-8 JSON 파일로 작성한다. 저장
 
 `checks.status`는 `passed`(통과), `failed`(실패), `not_run`(미실행), `not_applicable`(비적용) 중 하나다. 실행하지 않은 테스트를 통과로 기록하지 않으며 미실행·비적용에는 사유를 적는다. 링크만 보내거나 여러 검증을 한 문장으로 합쳐 전체 통과처럼 보이게 하지 않는다.
 
+- 제목·메타 정보·변경·검증·리뷰·남은 작업 사이에 빈 줄을 두고 섹션 제목은 굵게 표시. Discord는 `**제목**`, Slack은 `*제목*` 형식 적용
+- 변경·리뷰·남은 작업은 항목별 줄바꿈. 항목 안의 여러 줄과 문단도 보존하고 이어지는 줄은 들여쓰기. 본문 전체의 공백을 정리하면서 줄바꿈까지 제거하지 않음
+- 검증은 상태·검사명을 첫 줄에 쓰고 결과·사유는 다음 줄에 들여쓰기. 검사 항목 사이에도 빈 줄을 두어 긴 명령과 설명이 한 줄에 몰리지 않도록 작성
+- JSON 문자열 안의 줄바꿈은 `\n`으로 작성하면 파싱 후 실제 개행으로 전달됨. 완성된 본문을 다시 문자열로 감싸거나 `\\n`으로 치환하여 화면에 문자 그대로 표시하지 않음
+
 아래는 하네스 문서 구성 작업의 작성 예시다. 저장소와 PR 정보, 검증 결과는 실제 작업에 맞춰 작성한다.
 
 ```json
@@ -65,7 +70,7 @@ PR 생성·갱신 후 아래 정보를 UTF-8 JSON 파일로 작성한다. 저장
 }
 ```
 
-작성한 파일의 실제 알림 본문을 먼저 확인한다. `--preview`는 Webhook 설정 없이 형식·길이를 검사하고 본문을 출력하며 전송하지 않는다. `--dry-run`은 Webhook 설정까지 검사하지만 본문 대신 검사 결과를 출력한다.
+작성한 파일의 실제 알림 본문을 먼저 확인한다. `--preview`는 선택한 서비스의 강조 형식·줄바꿈·길이를 적용하여 Webhook 설정 없이 본문을 출력하며 전송하지 않는다. `--dry-run`은 Webhook 설정까지 검사하지만 본문 대신 검사 결과를 출력한다.
 
 ```bash
 node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notification.json --preview
@@ -95,4 +100,4 @@ node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notificatio
 - HTTP 오류, 429 요청 제한, 시간 초과는 자동 재시도하지 않음. 응답을 받지 못해도 메시지가 전달되었을 수 있으므로 채널 수신 여부와 서비스의 대기 시간을 확인한 뒤 재전송
 - 공식 서비스의 HTTPS Webhook만 허용하고 리다이렉트를 따라가지 않음. 오류 응답 본문이나 URL을 로그에 출력하지 않음
 
-API 기준: [Discord Execute Webhook](https://discord.com/developers/docs/resources/webhook#execute-webhook), [Slack Incoming Webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/).
+API·서식 기준: [Discord Execute Webhook](https://discord.com/developers/docs/resources/webhook#execute-webhook), [Discord Markdown](https://support.discord.com/hc/en-us/articles/210298617-Markdown-Text-101-Chat-Formatting-Bold-Italic-Underline), [Slack Incoming Webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/), [Slack 메시지 서식](https://docs.slack.dev/messaging/formatting-message-text/).
