@@ -134,6 +134,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 갱신 시 기존 자동화와 기록된 선택을 유지. 선택 기록이 없으면 사용 여부를 질문하고, 명시적으로 구성하지 않기로 한 프로젝트에는 반복 질문하지 않음. 사용자가 선택을 바꾸면 해당 요청 적용
 - 답변 전에는 미확정으로 기록하고 자동화 적용을 보류. 답변을 기다리는 동안 독립적인 조사·검증은 진행 가능. 미응답을 구성하지 않음으로 처리하지 않음
 - [구독 자동화](./references/rules/codex-subscription.md)를 읽고 비공개 GitHub 저장소, 전용 Linux self-hosted runner와 구독 로그인 유지, Git·PR·Webhook 및 검증 명령을 확인. 미준비 항목은 모아서 안내하고 실제 적용 완료로 보고하지 않음
+- [Actions flow 필수 준비](./references/rules/codex-subscription.md#actions-flow-필수-준비)에 따라 자동화 전용 `auth.json`, 인증 Secret 갱신 방식의 GitHub 갱신용 토큰, 조직·저장소의 Actions PR 생성 허용, `main` 등 실제 기본 브랜치 반영을 각각 확인. 현재 템플릿의 영구 파일 유지와 별도 Secret 복원·갱신 구현 필요를 구분하고 파일 복사·Secret 등록만으로 실행 완료 처리하지 않음
 - [workflow 템플릿](./assets/codex-subscription/workflow.yml)을 `.github/workflows/codex-subscription.yml`, [제어 스크립트](./assets/codex-subscription/automation.mjs)를 `.github/codex/automation.mjs`로 배치. 알림 도구는 기존 경로를 우선하고 없으면 기본 스크립트를 함께 복사
 - 사용자 요청이 템플릿 제공만인 경우 준비 조건과 설정 양식을 제공하고 실제 러너·로그인·원격 설정은 완료로 처리하지 않음. 공개 저장소에는 이 인증 방식의 실행 워크플로우를 설치하지 않음
 - 기존 파일은 보존. 기존 기준 브랜치·검증 명령·알림 경로에 맞게 조정하고, CI가 Worktree 준비와 커밋·PR을 처리하는 작업 권한은 프로젝트 override로 기록
