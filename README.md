@@ -2,6 +2,16 @@
 
 프로젝트의 기존 기술과 규칙을 분석하여 AGENTS.md와 하네스 문서를 구성하는 스킬.
 
+## 준비물
+
+- 설치 : Node.js와 npm/npx, Git CLI, 저장소에 접근 가능한 네트워크
+- 실행 : 사용할 AI Agent CLI와 필요한 계정 인증, 대상 프로젝트의 파일 쓰기 권한
+- 원격 작업과 PR : Git 원격 인증과 호스팅 서비스의 PR 생성 권한
+- 알림 : Discord 또는 Slack Webhook 설정과 전송 권한
+- 기획 수정 및 배포 : Python 3와 이 저장소. 배포된 스킬을 사용하는 사람은 Python이나 원본 저장소가 필요하지 않음
+
+문서 구성만 요청한 경우 원격 작업과 알림의 미준비 상태를 기록하고 구성할 수 있다. 전체 워크플로우 실행 전에는 각 단계에 필요한 준비물을 갖춰야 한다. 상세 기준은 [시작하기 전](./docs/main.md#시작하기-전) 참고.
+
 ## 설치와 사용
 
 대상 프로젝트에서 실행한다. Node.js와 npx가 필요하다.
@@ -21,6 +31,7 @@ $repository-harness 이 프로젝트에 하네스를 구성해줘.
 - 스킬에 규칙이 포함되므로 원본 저장소를 별도로 내려받을 필요 없음
 - `skills add`는 스킬을 설치하는 명령. 프로젝트의 하네스 문서 작성은 에이전트에게 구성 요청 시 진행
 - GitHub 설치 명령은 이 스킬과 생성된 규칙이 원격 저장소에 반영된 이후 사용 가능
+- 별도 npm 패키지 배포나 skills.sh 등록 신청 없이, Skills CLI가 GitHub 저장소의 `SKILL.md`를 찾아 설치
 
 CLI 옵션은 [공식 Skills CLI 문서](https://github.com/vercel-labs/skills) 참고.
 
@@ -50,6 +61,7 @@ $repository-harness 최신 규칙으로 하네스를 갱신하고 프로젝트�
 
 - 기획·규칙 원본 : [docs/main.md](./docs/main.md)와 `docs/`의 관련 문서
 - 에이전트 실행 절차 : [SKILL.md](./skills/repository-harness/SKILL.md)
+- 작업 이력과 도메인 정책 작성 규칙 : [문서작성](./docs/document-write.md)
 - 배포용 규칙 : `skills/repository-harness/references/rules/` (자동 생성)
 
 기획 문서를 수정한 뒤 아래 명령으로 배포용 규칙을 갱신하고 확인한다. Python 3가 필요하다.

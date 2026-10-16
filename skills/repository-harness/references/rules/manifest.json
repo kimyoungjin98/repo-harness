@@ -3,8 +3,8 @@
   "source": "docs/",
   "files": {
     "main.md": {
-      "source_sha256": "8cbff1c8b5c7f4a1ed853c8c15987eadeee3d280ab0a62d4d22394abb5b0084a",
-      "bundled_sha256": "532d1338dfc83ff31c927ffeb468d0c782ba0357d59e60d9648e73d12e9871a0"
+      "source_sha256": "5cab8fada0e28b72650838f0779b041f4f1089621eb7db69ba51f227afe3806e",
+      "bundled_sha256": "ceda6e0431af9098ebf88f19f6cf33f437b8998eb78ce4ee3db5b0dbabc642ac"
     },
     "code-base.md": {
       "source_sha256": "7fca3ff0627f2f698f4e2f84999ea47ace79111ae5ccd0447565cbda09eadfc9",
@@ -30,9 +30,13 @@
       "source_sha256": "293d59796561dbb7a58531198070a201c06c551f86088e355b37965d9f651236",
       "bundled_sha256": "c93323763e37eb4a67efa7e0788f915d7552a0bc46a2a83a4f3bb30558a21abc"
     },
+    "document-write.md": {
+      "source_sha256": "a0ffc38b4c02b24910bccfa4b621c6f158653ba7060f30cd8cf6c58c6a469fa5",
+      "bundled_sha256": "5f6b5ee4d46dca7801386aac7c1f4e857494a37e3408df16b112b376501ca528"
+    },
     "evaluation.md": {
-      "source_sha256": "4474d2b7a9a50351bdc090b669d9a25cf9e457c921c0da0d3b0a94b595505a3b",
-      "bundled_sha256": "065819196d57440651a61ea63ce0300a77467f7f505a7595fb7adeb6ef554765"
+      "source_sha256": "f65c413dde947b2a495e1d66068cc78c06b1a081f9d663872948692f886221c8",
+      "bundled_sha256": "28d5a14c9066f52e426a9ba37abc347d2bef28d4cf2d32723c11ca3b6a291785"
     }
   }
 }

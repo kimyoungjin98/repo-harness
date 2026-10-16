@@ -17,6 +17,7 @@ SOURCES = (
     "code-base/design-system.md",
     "test.md",
     "git-branch.md",
+    "document-write.md",
     "evaluation.md",
 )
 OUTPUT = ROOT / "skills/repository-harness/references/rules"
