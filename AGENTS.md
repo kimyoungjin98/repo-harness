@@ -3,10 +3,14 @@
 
 ## 문서 적용
 
-- 작업 시작 시 [워크플로우](./main.md)를 확인하고 요청에 해당하는 단계만 적용
-- 코드 변경 시 [코드 베이스 규칙](./code-base.md), 검증 시 [테스트](./test.md), 브랜치 작업 시 [Git 브랜치 전략](./git-branch.md)을 함께 확인
+- 작업 시작 시 [워크플로우](./docs/main.md)를 확인하고 요청에 해당하는 단계만 적용
+- 코드 변경 시 [코드 베이스 규칙](./docs/code-base.md), 검증 시 [테스트](./docs/test.md), 브랜치 작업 시 [Git 브랜치 전략](./docs/git-branch.md)을 함께 확인
 - 사용자 요청과 대상 프로젝트의 기존 규칙을 우선하고, 이 베이스의 기술 지정은 신규 구성 시 기본값으로 적용
 - 하위 폴더의 문서는 해당 영역에 적용하며, 공통 규칙의 기존 기술 유지 원칙을 변경하지 않음
 - 이 베이스를 다른 프로젝트에 적용할 경우 기존 `AGENTS.md`를 덮어쓰지 않고 필요한 규칙과 문서 참조를 반영
-- 하네스 문서 변경 시 [하네스 평가](./evaluation.md)의 관련 시나리오를 확인
+- 하네스 문서 변경 시 [하네스 평가](./docs/evaluation.md)의 관련 시나리오를 확인
 - 문서에 적힌 향후 구축 항목은 해당 기능의 구현이나 외부 작업을 바로 실행하라는 지시로 해석하지 않음
+- 대상 프로젝트에 하네스를 구성하는 요청은 [하네스 구성 스킬](./skills/repository-harness/SKILL.md)을 사용. 이 베이스 자체를 수정하는 작업과 구분
+- 기획·규칙 문서는 `docs/`, 스킬 실행 절차와 양식은 `skills/repository-harness/`에서 관리
+- `skills/repository-harness/references/rules/`는 배포용 자동 생성 파일. 직접 수정하지 않고 `docs/` 변경 후 `python3 scripts/build_skill.py`로 갱신
+- 배포 전 `python3 scripts/build_skill.py --check`로 원본과 배포용 규칙의 일치 여부 확인. 원본과 생성 파일을 함께 반영해야 CLI 설치에 최신 규칙이 포함됨
