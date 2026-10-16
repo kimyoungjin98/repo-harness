@@ -103,6 +103,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 원본의 `main.md`, `code-base.md`, `code-base/`, `test.md`, `git-branch.md`, `document-write.md`, `notifications.md`, `codex-subscription.md`, `evaluation.md`를 위 구조에 공통 규칙으로 한 벌만 배치. 프로젝트별 조정은 override와 `project.md`에 기록. 자동화 안내 문서 배치와 실행 workflow 설치는 구분
 - 기본 알림 도구를 선택하면 이 스킬의 `scripts/notify.mjs`를 대상 프로젝트의 `scripts/harness-notify.mjs`로 복사. 임시 스킬 경로에 의존하지 않도록 실제 프로젝트 경로의 명령을 `project.md`에 기록. 기존 전송 도구를 사용하면 복사하지 않음
 - PR 알림은 [알림 본문 규격](./references/rules/notifications.md#pr-알림-전송)을 적용하고 기본 스크립트의 `--pr-file` 명령을 기록. 저장소·PR 제목·브랜치·주요 변경·검증별 상태·리뷰·남은 작업이 포함된 JSON 작성과 preview 확인을 절차에 연결. 기존 도구도 같은 정보를 포함하도록 연결
+- 알림 본문은 섹션 사이 빈 줄, 항목별 줄바꿈, 검증 설명의 다음 줄 들여쓰기를 유지. 기존 도구를 연결할 때도 여러 줄을 한 문장으로 합치지 않고 preview와 전송 본문의 개행이 같은지 확인
 - 기존 목적지 파일은 임의로 덮어쓰지 않으며, 갱신은 [갱신 기준](./references/update.md)의 스크립트 해시 확인 적용
 - 링크 보존을 위해 규칙 문서 묶음을 함께 배치. 적용하지 않는 영역은 `project.md`와 override에 비적용 사유를 기록하고 공통 파일은 수정하지 않음
 - `project.md`에 실제 기술, 영역별 경로와 검증 명령, 기준 브랜치, 문서 위치, 적용하지 않는 규칙, 미확정 항목을 기록

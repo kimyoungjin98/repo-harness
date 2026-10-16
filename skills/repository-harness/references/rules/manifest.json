@@ -35,16 +35,16 @@
       "bundled_sha256": "bb1b92085f35a53a255fea003afa405c72a713e28dd0f0e06dec23d2e1cfa941"
     },
     "notifications.md": {
-      "source_sha256": "64e1108caa1c8b311a81de5e1aaa3e4c101b3acafb3fb9d65f10906c249c8383",
-      "bundled_sha256": "5fb2ace9e93647539ed71df5b1432098462a0cd371296eea6097008e8ba545d2"
+      "source_sha256": "c8f1538d58352175c4b23ce5b353695ae5fa881e9c97f95e636dda4a204e179c",
+      "bundled_sha256": "3849e26f2daf32f67c739ba00bcd1cf9da4832c070be75ba7f62c566d0e5424e"
     },
     "codex-subscription.md": {
       "source_sha256": "589da4155ae0cdf5c7a25fbaa954cdf7fc35764ecaa41b2b9934646e4cb23674",
       "bundled_sha256": "35fd90b8f8e6eee5100b79501fd4839141e53707a475ee4ecbf6436941331a54"
     },
     "evaluation.md": {
-      "source_sha256": "8d3020605a43467753d7807633251bb99eec9deb2e0a2a0a6e5608b915f4b85f",
-      "bundled_sha256": "702e3602f187a8ffd359f639f186e9189567af7c13205354240d5d9f71f7b632"
+      "source_sha256": "53fcfaaecea1f1550089a8c3a6bd198ed1c8a7aed0bb6b8d11c4b304af64b3dc",
+      "bundled_sha256": "732badc0cbee3a2aa3e5029e5106c0c02064b14dce81fc2524c0a9ebaabad821"
     }
   }
 }

@@ -26,18 +26,20 @@ node notify.mjs --provider discord|slack --pr-file pr.json
 Webhook URL은 환경변수로만 전달합니다. 파일 - 는 표준 입력을 뜻합니다.
 오류 시 자동 재시도하지 않습니다. 재전송 전에 채널의 수신 여부를 확인하세요.`;
 
-export function formatPrMessage(report) {
+export function formatPrMessage(report, { provider = "discord" } = {}) {
   if (!report || typeof report !== "object" || Array.isArray(report))
     throw new NotifyError("PR 알림은 JSON 객체로 작성하세요.");
-  const text = (value, field) => {
+  const text = (value, field, multiline = false) => {
     if (typeof value !== "string" || !value.trim())
       throw new NotifyError(`PR 알림의 ${field}을 확인하세요.`);
-    return value.trim().replace(/\s+/g, " ");
+    const lines = value.trim().replace(/\r\n?/g, "\n").split("\n")
+      .map(line => line.trim().replace(/[^\S\n]+/g, " "));
+    return multiline ? lines.join("\n") : lines.join(" ").replace(/ +/g, " ");
   };
   const list = (value, field, allowEmpty = false) => {
     if (!Array.isArray(value) || (!allowEmpty && value.length === 0))
       throw new NotifyError(`PR 알림의 ${field} 배열을 확인하세요.`);
-    return value.map(item => text(item, field));
+    return value.map(item => text(item, field, true));
   };
   const repository = text(report.repository, "repository");
   if (!/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+$/.test(repository))
@@ -63,21 +65,23 @@ export function formatPrMessage(report) {
   const checks = report.checks.map(check => {
     if (!check || !Object.hasOwn(labels, check.status))
       throw new NotifyError("검증 status는 passed·failed·not_run·not_applicable 중 하나여야 합니다.");
-    return `[${labels[check.status]}] ${text(check.name, "checks.name")} — ${text(check.detail, "checks.detail")}`;
+    return `[${labels[check.status]}] ${text(check.name, "checks.name")}\n${text(check.detail, "checks.detail", true)}`;
   });
-  const section = (name, items) => `${name}\n${items.map(item => `- ${item}`).join("\n")}`;
+  const emphasis = provider === "slack" ? "*" : "**";
+  const bold = value => `${emphasis}${value}${emphasis}`;
+  const bullet = item => item.split("\n").map((line, index) =>
+    index === 0 ? `- ${line}` : line ? `  ${line}` : "").join("\n");
+  const section = (name, items, separator = "\n") =>
+    `${bold(name)}\n${items.map(bullet).join(separator)}`;
   const number = url.pathname.match(/\/(?:pull|merge_requests)\/(\d+)\/?$/)?.[1];
   return [
-    `[PR ${report.action === "created" ? "생성" : "갱신"}] ${repository}${number ? ` #${number}` : ""}`,
-    `제목: ${title}`,
-    `브랜치: ${head} → ${base}`,
-    `링크: ${url.href}`,
-    "",
-    section("변경", summary), "",
-    section("검증", checks), "",
-    section("리뷰할 부분", review), "",
+    `${bold(`[PR ${report.action === "created" ? "생성" : "갱신"}] ${repository}${number ? ` #${number}` : ""}`)}\n${title}`,
+    `브랜치: ${head} → ${base}\nPR 링크: ${url.href}`,
+    section("변경", summary),
+    section("검증", checks, "\n\n"),
+    section("리뷰할 부분", review),
     section("남은 작업", remaining.length ? remaining : ["없음"]),
-  ].join("\n");
+  ].join("\n\n");
 }
 
 function messageConfig(provider, message) {
@@ -251,7 +255,7 @@ export async function run(argv, dependencies = {}) {
     try { report = JSON.parse(message); } catch {
       throw new NotifyError("PR 알림 파일의 JSON 형식을 확인하세요.");
     }
-    message = formatPrMessage(report);
+    message = formatPrMessage(report, { provider: values.provider });
   }
   if (values.preview) {
     if (values["dry-run"]) throw new NotifyError("--preview와 --dry-run 중 하나만 지정하세요.");
