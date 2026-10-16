@@ -77,11 +77,14 @@ $repository-harness 최신 규칙으로 하네스를 갱신하고 프로젝트�
 # 설정 검사만 수행 (Slack은 --provider slack)
 node scripts/harness-notify.mjs --provider discord --message "설정 확인" --dry-run
 
-# 실제 메시지 전송
-node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notification.txt
+# PR 알림 본문 확인 (Webhook 설정 없이 전송 전 미리보기)
+node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notification.json --preview
+
+# 실제 PR 알림 전송
+node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notification.json
 ```
 
-본문 작성, 사용자 지정 환경변수, 실패 처리는 [알림 사용법](./docs/notifications.md) 참고. 설정 검사와 실제 수신 성공은 구분한다.
+PR 알림에는 소유자/저장소·제목·브랜치·주요 변경·검증별 상태·리뷰할 부분·남은 작업을 표시한다. JSON 작성 예시, 사용자 지정 환경변수, 실패 처리는 [알림 사용법](./docs/notifications.md) 참고. 일반 메시지의 `--message`·`--message-file`도 유지하며 설정 검사와 실제 수신 성공은 구분한다.
 
 ## Codex 실행 승인 설정
 

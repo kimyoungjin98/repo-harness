@@ -15,14 +15,81 @@ const help = `Discord / Slack Webhook 알림 (Node.js 20 이상)
 
 node notify.mjs --provider discord|slack --message "메시지"
 node notify.mjs --provider discord|slack --message-file message.txt
+node notify.mjs --provider discord|slack --pr-file pr.json
 
 --webhook-env NAME   URL이 저장된 환경변수 이름 (기본: DISCORD_WEBHOOK_URL / SLACK_WEBHOOK_URL)
 --dry-run            설정과 본문 검사만 수행, 네트워크 요청 없음
+--preview            본문만 출력, Webhook 설정 확인·네트워크 요청 없음
 --timeout-ms N       요청 제한 시간 (기본 10000, 최대 60000)
 --help              도움말
 
 Webhook URL은 환경변수로만 전달합니다. 파일 - 는 표준 입력을 뜻합니다.
 오류 시 자동 재시도하지 않습니다. 재전송 전에 채널의 수신 여부를 확인하세요.`;
+
+export function formatPrMessage(report) {
+  if (!report || typeof report !== "object" || Array.isArray(report))
+    throw new NotifyError("PR 알림은 JSON 객체로 작성하세요.");
+  const text = (value, field) => {
+    if (typeof value !== "string" || !value.trim())
+      throw new NotifyError(`PR 알림의 ${field}을 확인하세요.`);
+    return value.trim().replace(/\s+/g, " ");
+  };
+  const list = (value, field, allowEmpty = false) => {
+    if (!Array.isArray(value) || (!allowEmpty && value.length === 0))
+      throw new NotifyError(`PR 알림의 ${field} 배열을 확인하세요.`);
+    return value.map(item => text(item, field));
+  };
+  const repository = text(report.repository, "repository");
+  if (!/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+$/.test(repository))
+    throw new NotifyError("repository는 소유자/저장소 형식으로 작성하세요.");
+  const title = text(report.title, "title");
+  const head = text(report.head, "head");
+  const base = text(report.base, "base");
+  let url;
+  try { url = new URL(report.url); } catch {
+    throw new NotifyError("PR URL을 확인하세요.");
+  }
+  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash ||
+      !url.pathname.startsWith(`/${repository}/`))
+    throw new NotifyError("PR URL의 HTTPS·저장소 경로를 확인하세요.");
+  if (!["created", "updated"].includes(report.action))
+    throw new NotifyError("action은 created 또는 updated로 작성하세요.");
+  const summary = list(report.summary, "summary");
+  const review = list(report.review, "review");
+  const remaining = list(report.remaining, "remaining", true);
+  const labels = { passed: "통과", failed: "실패", not_run: "미실행", not_applicable: "비적용" };
+  if (!Array.isArray(report.checks) || report.checks.length === 0)
+    throw new NotifyError("PR 알림의 checks 배열을 확인하세요.");
+  const checks = report.checks.map(check => {
+    if (!check || !Object.hasOwn(labels, check.status))
+      throw new NotifyError("검증 status는 passed·failed·not_run·not_applicable 중 하나여야 합니다.");
+    return `[${labels[check.status]}] ${text(check.name, "checks.name")} — ${text(check.detail, "checks.detail")}`;
+  });
+  const section = (name, items) => `${name}\n${items.map(item => `- ${item}`).join("\n")}`;
+  const number = url.pathname.match(/\/(?:pull|merge_requests)\/(\d+)\/?$/)?.[1];
+  return [
+    `[PR ${report.action === "created" ? "생성" : "갱신"}] ${repository}${number ? ` #${number}` : ""}`,
+    `제목: ${title}`,
+    `브랜치: ${head} → ${base}`,
+    `링크: ${url.href}`,
+    "",
+    section("변경", summary), "",
+    section("검증", checks), "",
+    section("리뷰할 부분", review), "",
+    section("남은 작업", remaining.length ? remaining : ["없음"]),
+  ].join("\n");
+}
+
+function messageConfig(provider, message) {
+  const config = Object.hasOwn(providers, provider) ? providers[provider] : null;
+  if (!config)
+    throw new NotifyError("provider는 discord 또는 slack이어야 합니다.");
+  if (typeof message !== "string" || !message.trim())
+    throw new NotifyError("빈 메시지는 전송할 수 없습니다.");
+  if (message.length > config.limit)
+    throw new NotifyError(`${provider} 메시지는 ${config.limit}자 이내로 작성하세요.`);
+  return config;
+}
 
 function webhookUrl(provider, value) {
   let url;
@@ -71,15 +138,7 @@ export async function notify(
   { provider, message, webhookEnv, dryRun = false, timeoutMs = 10000 },
   { env = process.env, fetchImpl = globalThis.fetch } = {},
 ) {
-  const config = Object.hasOwn(providers, provider) ? providers[provider] : null;
-  if (!config)
-    throw new NotifyError("provider는 discord 또는 slack이어야 합니다.");
-  if (typeof message !== "string" || !message.trim())
-    throw new NotifyError("빈 메시지는 전송할 수 없습니다.");
-  if (message.length > config.limit)
-    throw new NotifyError(
-      `${provider} 메시지는 ${config.limit}자 이내로 작성하세요.`,
-    );
+  const config = messageConfig(provider, message);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 60000) {
     throw new NotifyError("timeout-ms는 1~60000 사이 정수여야 합니다.");
   }
@@ -155,9 +214,11 @@ export async function run(argv, dependencies = {}) {
         provider: { type: "string" },
         message: { type: "string" },
         "message-file": { type: "string" },
+        "pr-file": { type: "string" },
         "webhook-env": { type: "string" },
         "timeout-ms": { type: "string" },
         "dry-run": { type: "boolean" },
+        preview: { type: "boolean" },
         help: { type: "boolean" },
       },
     }));
@@ -167,25 +228,35 @@ export async function run(argv, dependencies = {}) {
     );
   }
   if (values.help) return help;
-  if (
-    (values.message !== undefined) ===
-    (values["message-file"] !== undefined)
-  ) {
+  if ([values.message, values["message-file"], values["pr-file"]].filter(value => value !== undefined).length !== 1) {
     throw new NotifyError(
-      "--message 또는 --message-file 중 하나만 지정하세요.",
+      "--message, --message-file, --pr-file 중 하나만 지정하세요.",
     );
   }
   let message = values.message;
-  if (values["message-file"] !== undefined) {
+  const file = values["message-file"] ?? values["pr-file"];
+  if (file !== undefined) {
     try {
-      if (values["message-file"] === "-") {
+      if (file === "-") {
         message = "";
         process.stdin.setEncoding("utf8");
         for await (const chunk of process.stdin) message += chunk.toString();
-      } else message = await readFile(values["message-file"], "utf8");
+      } else message = await readFile(file, "utf8");
     } catch {
       throw new NotifyError("메시지 파일 또는 표준 입력을 읽을 수 없습니다.");
     }
+  }
+  if (values["pr-file"] !== undefined) {
+    let report;
+    try { report = JSON.parse(message); } catch {
+      throw new NotifyError("PR 알림 파일의 JSON 형식을 확인하세요.");
+    }
+    message = formatPrMessage(report);
+  }
+  if (values.preview) {
+    if (values["dry-run"]) throw new NotifyError("--preview와 --dry-run 중 하나만 지정하세요.");
+    messageConfig(values.provider, message);
+    return message;
   }
   return notify(
     {

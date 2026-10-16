@@ -23,8 +23,16 @@ function setup(t) {
   git(root, 'config', 'user.name', 'Test');
   git(root, 'config', 'user.email', 'test@example.invalid');
   mkdirSync(join(root, 'scripts'));
-  // No network: emulate the existing notification command.
-  writeFileSync(join(root, 'scripts/harness-notify.mjs'), "if (process.env.FAIL_NOTIFY) process.exit(1);\n");
+  // Exercise the real formatter and CLI with simulated delivery, never a Webhook.
+  const notifyModule = new URL('../skills/repository-harness/scripts/notify.mjs', import.meta.url).href;
+  writeFileSync(join(root, 'scripts/harness-notify.mjs'), `
+import { run } from ${JSON.stringify(notifyModule)};
+import { readFileSync, writeFileSync } from 'node:fs';
+if (process.env.FAIL_NOTIFY) process.exit(1);
+const args = process.argv.slice(2);
+writeFileSync(process.env.NOTIFICATION_CAPTURE, readFileSync(args[args.indexOf('--pr-file') + 1]));
+await run(args, { env: process.env, fetchImpl: async () => new Response('{"id":"fake-id"}', {status:200}) });
+`);
   writeFileSync(join(root, 'README.md'), 'initial\n');
   git(root, 'add', '.');
   git(root, 'commit', '-m', 'Initial');
@@ -39,7 +47,7 @@ if (process.env.OPENAI_API_KEY || process.env.INPUT_GITHUB_TOKEN || process.env.
 if (!process.env.NO_CHANGE) fs.writeFileSync(process.env.PROTECTED_CHANGE ? '.github/codex/changed.txt' : 'change.txt', process.env.CHANGE_TEXT || 'implemented');
 if (process.env.FAIL_CODEX) process.exit(1);
 if (process.env.RACE_SHA) require('node:child_process').execFileSync('git', ['--git-dir=' + process.env.TEST_REMOTE, 'update-ref', 'refs/heads/feature/codex-issue-7', process.env.RACE_SHA]);
-fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], JSON.stringify({status: process.env.BLOCKED ? 'blocked' : 'ready', summary:'작업 요약', validation:'검증 결과', remaining:'없음'}));
+fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], JSON.stringify({status: process.env.BLOCKED ? 'blocked' : 'ready', summary:'작업 요약', validation:'검증 결과', remaining:'없음', checks:[{name:'관련 테스트',status:process.env.CHECKS_FAILED ? 'failed' : 'passed',detail:'1건 검사'}],review:['변경 파일의 기대 동작 확인']}));
 `);
   chmodSync(join(bin, 'codex'), 0o755);
   const issue = { number: 7, state: 'open', title: 'Task $(touch escaped)', body: 'Implement this', html_url: 'https://github.com/test/repo/issues/7' };
@@ -80,8 +88,9 @@ fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], JSON.stringify
     summary: { addRaw() { return this; }, async write() {} } };
   const environment = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CODEX_HOME: home, GITHUB_WORKSPACE: root,
     RUNNER_TEMP: runnerTemp, CODEX_VERIFY_COMMAND: 'test -f change.txt', CODEX_NOTIFY_PROVIDER: 'discord',
-    DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/fake/fake', OPENAI_API_KEY: 'must-not-be-used',
-    GITHUB_TOKEN: 'must-not-reach-agent', INPUT_GITHUB_TOKEN: 'must-not-reach-agent', PROMPT_CAPTURE: join(directory, 'prompt.txt') };
+    DISCORD_WEBHOOK_URL: 'https://discord.com/api/webhooks/123/fake', OPENAI_API_KEY: 'must-not-be-used',
+    GITHUB_TOKEN: 'must-not-reach-agent', INPUT_GITHUB_TOKEN: 'must-not-reach-agent', PROMPT_CAPTURE: join(directory, 'prompt.txt'),
+    NOTIFICATION_CAPTURE: join(directory, 'notification.json') };
   for (const key of ['NO_CHANGE', 'FAIL_CODEX', 'BLOCKED', 'FAIL_NOTIFY', 'PROTECTED_CHANGE']) delete environment[key];
   return { root, remote, home, runnerTemp, directory, issue, context, github, core, state, environment };
 }
@@ -114,6 +123,12 @@ test('이슈에서 PR 생성, 완료 이벤트 재실행 생략, 후속 코멘�
   await run(s.github, s.context, s.core, s.environment);
   assert.deepEqual(s.state.failures, []);
   assert.equal(s.state.created.length, 1);
+  const firstReport = JSON.parse(readFileSync(s.environment.NOTIFICATION_CAPTURE, 'utf8'));
+  assert.equal(firstReport.repository, 'test/repo');
+  assert.equal(firstReport.action, 'created');
+  assert.equal(firstReport.head, 'feature/codex-issue-7');
+  assert.equal(firstReport.base, 'main');
+  assert.deepEqual(firstReport.checks.at(-1), {name:s.environment.CODEX_VERIFY_COMMAND,status:'passed',detail:'PR 반영 직전 자동화 재검증 통과'});
   assert.match(s.state.created[0].body, /Closes #7/);
   assert.equal(git(s.remote, 'show', 'feature/codex-issue-7:change.txt'), 'implemented');
   assert.equal(git(s.root, 'branch', '--show-current'), 'main');
@@ -130,6 +145,7 @@ test('이슈에서 PR 생성, 완료 이벤트 재실행 생략, 후속 코멘�
   assert.deepEqual(s.state.failures, []);
   assert.equal(s.state.created.length, 1);
   assert.equal(git(s.remote, 'show', 'feature/codex-issue-7:change.txt'), 'second');
+  assert.equal(JSON.parse(readFileSync(s.environment.NOTIFICATION_CAPTURE, 'utf8')).action, 'updated');
   assert.equal(git(s.remote, 'rev-parse', 'feature/codex-issue-7^'), previous);
   assert.match(readFileSync(s.environment.PROMPT_CAPTURE, 'utf8'), /originalIssue/);
 });
@@ -151,11 +167,12 @@ test('PR 요청에 원본 이슈를 포함하고 fork와 종료된 PR 차단', a
   await assert.rejects(request(s.github, s.context), /닫힌/);
 });
 
-for (const mode of ['verification', 'blocked', 'codex', 'auth']) {
+for (const mode of ['verification', 'blocked', 'reported-failure', 'codex', 'auth']) {
   test(`${mode} 실패 시 publish 없이 작업 상태 보존`, async t => {
     const s = setup(t);
     if (mode === 'verification') s.environment.CODEX_VERIFY_COMMAND = 'exit 1';
     if (mode === 'blocked') s.environment.BLOCKED = '1';
+    if (mode === 'reported-failure') s.environment.CHECKS_FAILED = '1';
     if (mode === 'codex') s.environment.FAIL_CODEX = '1';
     if (mode === 'auth') writeFileSync(join(s.home, 'auth.json'), '{"OPENAI_API_KEY":"fake-secret"}');
     await run(s.github, s.context, s.core, s.environment);
