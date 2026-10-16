@@ -28,6 +28,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 백엔드가 있으면 [백엔드 규칙](./references/rules/code-base/back-end.md)을 읽음
 - 설치 결과 검증 시 [하네스 평가](./references/rules/evaluation.md)의 관련 시나리오 확인
 - 알림 준비와 전송은 [Discord·Slack 알림](./references/rules/notifications.md), 기본 전송 도구는 [알림 스크립트](./scripts/notify.mjs) 참조
+- 구독 계정으로 GitHub 자동화를 요청하면 [Codex 구독 자동화](./references/rules/codex-subscription.md)의 적용 조건과 템플릿 사용
 - 대상에 기록할 정보는 [프로젝트 설정 양식](./assets/project.md)을 참고
 - 규칙을 충돌 없이 적용할 수 없는 부분만 사용자에게 확인. 기존 기술과 규칙을 우선한다는 원칙은 질문 없이 적용
 
@@ -75,6 +76,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
     ├── test.md
     ├── git-branch.md
     ├── notifications.md
+    ├── codex-subscription.md
     ├── document-write.md
     ├── evaluation.md
     ├── overrides/          # 프로젝트별 추가·대체·비적용 규칙이 있을 때 생성
@@ -82,7 +84,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
         └── state.json      # 원본 경로와 해시만 기록
 ```
 
-- 원본의 `main.md`, `code-base.md`, `code-base/`, `test.md`, `git-branch.md`, `document-write.md`, `notifications.md`, `evaluation.md`를 위 구조에 공통 규칙으로 한 벌만 배치. 프로젝트별 조정은 override와 `project.md`에 기록
+- 원본의 `main.md`, `code-base.md`, `code-base/`, `test.md`, `git-branch.md`, `document-write.md`, `notifications.md`, `codex-subscription.md`, `evaluation.md`를 위 구조에 공통 규칙으로 한 벌만 배치. 프로젝트별 조정은 override와 `project.md`에 기록. 자동화 안내 문서 배치와 실행 workflow 설치는 구분
 - 기본 알림 도구를 선택하면 이 스킬의 `scripts/notify.mjs`를 대상 프로젝트의 `scripts/harness-notify.mjs`로 복사. 임시 스킬 경로에 의존하지 않도록 실제 프로젝트 경로의 명령을 `project.md`에 기록. 기존 전송 도구를 사용하면 복사하지 않음
 - 기존 목적지 파일은 임의로 덮어쓰지 않으며, 갱신은 [갱신 기준](./references/update.md)의 스크립트 해시 확인 적용
 - 링크 보존을 위해 규칙 문서 묶음을 함께 배치. 적용하지 않는 영역은 `project.md`와 override에 비적용 사유를 기록하고 공통 파일은 수정하지 않음
@@ -96,6 +98,16 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 변경 없는 재실행은 결과만 보고하고 작업 이력을 추가하거나 날짜를 바꾸지 않음
 - 원본 `main.md`의 `Skills 활용`, `AGENTS.md`, `여러 프로젝트별 구축 필요`는 베이스 유지관리 항목이므로 대상의 운영 절차로 복사하지 않음. 대신 대상의 `project.md`, 루트 `AGENTS.md`, 설치된 `evaluation.md` 참조를 연결
 - 문서가 다른 위치로 이동한 경우 모든 상대 링크를 새 위치 기준으로 수정
+
+## 구독 계정의 GitHub 자동화
+
+- 사용자가 이슈·PR 코멘트 자동화를 요청한 경우에만 적용. 일반 하네스 구성·갱신에 자동으로 추가하지 않음
+- [구독 자동화](./references/rules/codex-subscription.md)를 읽고 비공개 GitHub 저장소, 전용 Linux self-hosted runner와 구독 로그인 유지, Git·PR·Webhook 및 검증 명령을 확인. 미준비 항목은 모아서 안내하고 실제 적용 완료로 보고하지 않음
+- [workflow 템플릿](./assets/codex-subscription/workflow.yml)을 `.github/workflows/codex-subscription.yml`, [제어 스크립트](./assets/codex-subscription/automation.mjs)를 `.github/codex/automation.mjs`로 배치. 알림 도구는 기존 경로를 우선하고 없으면 기본 스크립트를 함께 복사
+- 사용자 요청이 템플릿 제공만인 경우 준비 조건과 설정 양식을 제공하고 실제 러너·로그인·원격 설정은 완료로 처리하지 않음. 공개 저장소에는 이 인증 방식의 실행 워크플로우를 설치하지 않음
+- 기존 파일은 보존. 기존 기준 브랜치·검증 명령·알림 경로에 맞게 조정하고, CI가 Worktree 준비와 커밋·PR을 처리하는 작업 권한은 프로젝트 override로 기록
+- `project.md`에 적용 여부, 원본과 배치 경로, 러너 라벨·인증 저장 위치, 설정 이름과 준비 상태, 검증 명령·실행 결과·미실행 항목 기록. 토큰·로그인 파일·Webhook 원문은 기록하지 않음
+- 배치한 workflow와 제어 스크립트의 실제 경로·SHA-256을 상태의 `installed_templates`에 기록하고 [갱신 기준](./references/update.md) 적용. 원격 기본 브랜치 반영과 실제 이벤트 실행 검증은 별도 상태로 보고
 
 ## AGENTS.md 연결과 재실행
 
