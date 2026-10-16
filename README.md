@@ -81,6 +81,12 @@ node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notifi
 
 본문 작성, 사용자 지정 환경변수, 실패 처리는 [알림 사용법](./docs/notifications.md) 참고. 설정 검사와 실제 수신 성공은 구분한다.
 
+## Codex 실행 승인 설정
+
+하네스 구성 시 에이전트가 `기존 설정 유지` / `승인 자동 검토` / `전체 권한` 중 실행 방식을 묻는다. 변경을 선택하면 현재 프로젝트 또는 사용자 전역의 적용 범위도 확인하고 같은 작업에서 설정한다. 이미 선택한 방식과 범위는 갱신 시 유지한다.
+
+자동 검토는 샌드박스를 유지하고 별도 에이전트가 승인 요청을 검토한다. 전체 권한은 명령 승인과 파일·네트워크 샌드박스 제한을 해제한다. 설정 파일 반영과 재시작·프로젝트 신뢰·관리자 정책에 따른 실제 적용은 구분한다. 상세 기준은 [Codex 실행 승인 설정](./docs/main.md#codex-실행-승인-설정) 참고.
+
 ## Codex 구독 계정의 이슈·PR 자동화
 
 OpenAI API 키 없이 구독으로 로그인한 Codex CLI를 사용하는 [재사용 템플릿](./skills/repository-harness/assets/codex-subscription/)을 포함한다. 비공개 GitHub 저장소와 로그인 정보를 유지하는 전용 Linux self-hosted runner가 필요하며, 공개 저장소에서는 실행하지 않는다.
