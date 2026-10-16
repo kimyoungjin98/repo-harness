@@ -26,24 +26,62 @@ node scripts/harness-notify.mjs --provider discord --message "연동 설정 확�
 
 ## PR 알림 전송
 
-PR 생성 후 링크와 검증 결과를 UTF-8 파일로 작성한다. 외부 입력을 셸 명령 문자열에 직접 삽입하지 않고 파일로 전달한다.
+PR 생성·갱신 후 아래 정보를 UTF-8 JSON 파일로 작성한다. 저장소·제목·URL·브랜치는 Git 원격과 실제 PR 메타데이터로 확인하고, 작업 요약과 검증 결과는 해당 작업의 실제 내용으로 작성한다. 외부 입력을 셸 명령 문자열에 직접 삽입하지 않고 파일로 전달한다.
 
-```text
-PR: 작업 제목
-링크: 실제 PR URL
-변경: 주요 변경 내용
-검증: 실행한 명령과 결과
-남음: 미실행 항목 또는 없음
+| 항목 | 작성 기준 |
+| --- | --- |
+| `repository` | 소유자를 포함한 `owner/repo`. 여러 저장소 알림을 구분할 수 있도록 표시 |
+| `title`, `url` | 실제 PR 제목과 HTTPS URL. URL의 저장소 경로 일치 확인. 인증정보·query·fragment 없는 기본 PR URL 사용 |
+| `action` | 신규 PR은 `created`, 기존 PR 수정은 `updated` |
+| `head`, `base` | 실제 작업 브랜치와 PR 대상 브랜치 |
+| `summary` | 주요 변경 1~3개를 배열로 작성. 변경 파일·영역과 달라진 동작을 구체적으로 기록 |
+| `checks` | 검증별 `name`·`status`·`detail`. 실제 명령 또는 검사 대상, 결과와 확인 근거 기록 |
+| `review` | 사람이 검토할 위치와 기대 동작을 배열로 기록. 단순히 검토 요청으로 끝내지 않음 |
+| `remaining` | 미실행 검증·후속 조치와 이유를 배열로 기록. 남은 작업이 없으면 빈 배열 |
+
+`checks.status`는 `passed`(통과), `failed`(실패), `not_run`(미실행), `not_applicable`(비적용) 중 하나다. 실행하지 않은 테스트를 통과로 기록하지 않으며 미실행·비적용에는 사유를 적는다. 링크만 보내거나 여러 검증을 한 문장으로 합쳐 전체 통과처럼 보이게 하지 않는다.
+
+아래는 하네스 문서 구성 작업의 작성 예시다. 저장소와 PR 정보, 검증 결과는 실제 작업에 맞춰 작성한다.
+
+```json
+{
+  "repository": "team/shopping-tool",
+  "title": "레포지토리 하네스 구성",
+  "url": "https://github.com/team/shopping-tool/pull/1",
+  "action": "created",
+  "head": "feature/configure-harness",
+  "base": "main",
+  "summary": [
+    "AGENTS.md에 프로젝트 하네스 규칙 연결",
+    "PR 생성 후 Discord 알림 전송 명령 추가"
+  ],
+  "checks": [
+    { "name": "문서 상대 링크", "status": "passed", "detail": "변경 문서의 참조 경로 확인" },
+    { "name": "앱 테스트·빌드", "status": "not_applicable", "detail": "앱 코드 변경 없음" },
+    { "name": "Webhook 수신", "status": "not_run", "detail": "실제 시험 전송 요청이 없어 미실행" }
+  ],
+  "review": ["기준 브랜치와 project.md의 검증 명령이 운영 방식에 맞는지 확인"],
+  "remaining": ["권한 확인 후 실제 Webhook 수신 검증"]
+}
 ```
 
-작성한 파일 경로를 지정하여 선택한 서비스에 한 번 전송한다.
+작성한 파일의 실제 알림 본문을 먼저 확인한다. `--preview`는 Webhook 설정 없이 형식·길이를 검사하고 본문을 출력하며 전송하지 않는다. `--dry-run`은 Webhook 설정까지 검사하지만 본문 대신 검사 결과를 출력한다.
 
 ```bash
-node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notification.txt
+node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notification.json --preview
+node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notification.json --dry-run
+```
+
+기존 전송 권한에 따라 선택한 서비스에 한 번 전송한다. `--pr-file`은 저장소·제목·브랜치·변경·검증·리뷰·남은 작업을 구분해 본문으로 변환하며, 필수 정보가 없으면 전송 전에 실패한다.
+
+```bash
+node scripts/harness-notify.mjs --provider discord --pr-file /tmp/pr-notification.json
 ```
 
 - Slack은 위 명령의 `discord`를 `slack`으로 변경
-- 짧은 본문은 `--message "메시지"`, 표준 입력은 `--message-file -` 사용. 두 옵션 중 하나만 지정
+- PR 알림은 `--pr-file`을 기본으로 사용. 일반 메시지는 `--message "메시지"` 또는 `--message-file`을 유지. 세 입력 중 하나만 지정하며 파일 `-`는 표준 입력 사용
+- 기존 전송 도구를 쓰는 프로젝트도 위 항목을 포함하는 본문을 작성. 현재 도구가 일반 텍스트만 받으면 동일한 항목과 구분을 유지해 전송
+- 기존 스크립트에 `--pr-file`이 없으면 설치 해시와 사용자 변경을 확인하여 스크립트를 먼저 갱신. 자동화 템플릿의 새 입력을 적용할 때 전송 스크립트 지원 여부도 함께 확인
 - 성공은 종료 코드 `0`과 `sent: true`로 확인. `dryRun: true`는 실제 전송 성공과 구분
 - 오류는 종료 코드 `1`. PR 생성 성공과 알림 실패를 구분하여 보고
 
@@ -52,6 +90,7 @@ node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notifi
 - Discord는 `wait=true`로 전송 확인 응답을 요청하고 메시지 ID를 확인. 자동 멘션은 비활성화
 - Slack은 HTTP 200과 `ok` 응답을 확인. 본문의 명시적 멘션은 서비스에서 해석될 수 있으므로 전송 전 확인
 - 스크립트의 본문 제한은 Discord 2,000자, Slack 4,000자(JavaScript 문자열 길이 기준). 초과하면 실패하며 임의로 자르거나 여러 번 나누어 보내지 않음
+- 길이를 줄일 때 저장소·PR 식별 정보와 검증 상태는 유지하고 변경·리뷰 항목은 핵심 내용으로 정리. 상세 내용은 PR 본문에서 확인할 수 있도록 작성
 - 기본 제한 시간은 10초. `--timeout-ms`로 1~60,000ms 사이 정수 지정 가능
 - HTTP 오류, 429 요청 제한, 시간 초과는 자동 재시도하지 않음. 응답을 받지 못해도 메시지가 전달되었을 수 있으므로 채널 수신 여부와 서비스의 대기 시간을 확인한 뒤 재전송
 - 공식 서비스의 HTTPS Webhook만 허용하고 리다이렉트를 따라가지 않음. 오류 응답 본문이나 URL을 로그에 출력하지 않음

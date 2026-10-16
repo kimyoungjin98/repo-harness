@@ -6,7 +6,7 @@ import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { notify, run } from "../skills/repository-harness/scripts/notify.mjs";
+import { formatPrMessage, notify, run } from "../skills/repository-harness/scripts/notify.mjs";
 
 async function runProcess(command, args, { input = "", encoding, ...options }) {
   // File descriptors also work in sandboxes that restrict child-process pipes.
@@ -35,6 +35,108 @@ const env = { DISCORD_WEBHOOK_URL: discord, SLACK_WEBHOOK_URL: slack };
 const cli = fileURLToPath(
   new URL("../skills/repository-harness/scripts/notify.mjs", import.meta.url),
 );
+
+const prReport = {
+  repository: "team/shopping-tool", title: "레포지토리 하네스 구성",
+  url: "https://github.com/team/shopping-tool/pull/1", action: "created",
+  head: "feature/configure-harness", base: "main",
+  summary: ["AGENTS.md에 하네스 규칙 연결", "PR 알림 스크립트 추가"],
+  checks: [
+    { name: "문서 링크", status: "passed", detail: "관련 링크 12개 확인" },
+    { name: "Webhook 수신", status: "not_run", detail: "실제 전송 요청이 없어 미실행" },
+    { name: "앱 테스트", status: "not_applicable", detail: "앱 코드 변경 없음" },
+  ],
+  review: ["프로젝트의 기준 브랜치와 실제 검증 명령 확인"],
+  remaining: ["실제 Webhook 수신 검증"],
+};
+
+test("PR message identifies repository and separates changes, checks, review, remaining", () => {
+  assert.equal(formatPrMessage(prReport), `[PR 생성] team/shopping-tool #1
+제목: 레포지토리 하네스 구성
+브랜치: feature/configure-harness → main
+링크: https://github.com/team/shopping-tool/pull/1
+
+변경
+- AGENTS.md에 하네스 규칙 연결
+- PR 알림 스크립트 추가
+
+검증
+- [통과] 문서 링크 — 관련 링크 12개 확인
+- [미실행] Webhook 수신 — 실제 전송 요청이 없어 미실행
+- [비적용] 앱 테스트 — 앱 코드 변경 없음
+
+리뷰할 부분
+- 프로젝트의 기준 브랜치와 실제 검증 명령 확인
+
+남은 작업
+- 실제 Webhook 수신 검증`);
+  const updated = structuredClone(prReport);
+  updated.action = "updated";
+  updated.remaining = [];
+  updated.checks.push({ name: "추가 테스트", status: "failed", detail: "원인 확인 필요" });
+  assert.match(formatPrMessage(updated), /^\[PR 갱신\]/);
+  assert.match(formatPrMessage(updated), /\[실패\] 추가 테스트/);
+  assert.match(formatPrMessage(updated), /남은 작업\n- 없음$/);
+});
+
+test("PR message rejects missing context and invalid checks without exposing supplied values", () => {
+  for (const field of ["repository", "title", "url", "action", "head", "base", "summary", "checks", "review", "remaining"]) {
+    const invalid = structuredClone(prReport);
+    delete invalid[field];
+    assert.throws(() => formatPrMessage(invalid), /PR|repository|action|검증/);
+  }
+  for (const change of [
+    { repository: "shopping-tool" }, { summary: [] }, { review: [] },
+    { checks: [{ name: "test", status: "maybe", detail: "uncertain" }] },
+    { checks: [{ name: "test", status: "not_run", detail: "" }] },
+    { url: "https://fake-secret@github.com/team/shopping-tool/pull/1" },
+    { url: "https://github.com/other/repo/pull/1?fake-secret" },
+    { url: "https://github.com/team/shopping-tool/pull/1?access_token=fake-secret" },
+  ]) {
+    assert.throws(() => formatPrMessage({ ...prReport, ...change }), error => !error.message.includes("fake-secret"));
+  }
+});
+
+test("PR JSON supports preview, dry-run, delivery, and mutually exclusive message inputs", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "notify-pr-"));
+  try {
+    const path = join(dir, "pr.json");
+    await writeFile(path, JSON.stringify(prReport));
+    let calls = 0;
+    const dependencies = { env, fetchImpl: async (_url, options) => {
+      calls++;
+      assert.equal(JSON.parse(options.body).content, formatPrMessage(prReport));
+      return new Response('{"id":"987"}', { status: 200 });
+    } };
+    const args = ["--provider", "discord", "--pr-file", path];
+    assert.equal(await run([...args, "--preview"], { env: {}, fetchImpl: () => assert.fail("Unexpected network") }), formatPrMessage(prReport));
+    assert.equal((await run([...args, "--dry-run"], dependencies)).dryRun, true);
+    assert.equal(calls, 0);
+    assert.equal((await run(args, dependencies)).sent, true);
+    assert.equal(calls, 1);
+    await assert.rejects(run([...args, "--message", "a"], dependencies), /하나만/);
+    await assert.rejects(run([...args, "--preview", "--dry-run"], dependencies), /하나만/);
+    await writeFile(path, '{"fake-secret":');
+    await assert.rejects(run([...args, "--dry-run"], dependencies), error => error.message.includes("JSON") && !error.message.includes("fake-secret"));
+    assert.equal(calls, 1);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("PR preview through stdin is readable without a Webhook and respects service length", async () => {
+  const result = await runProcess(process.execPath,
+    [cli, "--provider", "discord", "--pr-file", "-", "--preview"],
+    { env: { ...process.env, DISCORD_WEBHOOK_URL: "" }, input: JSON.stringify(prReport), encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), formatPrMessage(prReport));
+  const dir = await mkdtemp(join(tmpdir(), "notify-pr-long-"));
+  try {
+    const path = join(dir, "pr.json");
+    await writeFile(path, JSON.stringify({ ...prReport, summary: ["가".repeat(2100)] }));
+    await assert.rejects(run(["--provider", "discord", "--pr-file", path, "--preview"]), /2000자/);
+    const message = await run(["--provider", "slack", "--pr-file", path, "--preview"]);
+    assert.match(message, /가{2100}/);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
 
 test("Discord sends Korean multiline JSON once and waits for confirmation", async () => {
   let calls = 0;

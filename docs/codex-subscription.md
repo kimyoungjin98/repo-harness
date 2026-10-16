@@ -46,6 +46,7 @@
 | `scripts/notify.mjs` | `scripts/harness-notify.mjs` |
 
 - 기존 파일은 덮어쓰지 않음. 기존 전송 도구가 있으면 `automation.mjs`의 알림 실행 부분만 해당 도구에 맞게 조정하고 변경 근거 기록
+- PR 알림은 [본문 규격](./notifications.md#pr-알림-전송)의 JSON을 생성하여 `--pr-file`로 전달. 기존 도구도 저장소·PR 정보·브랜치·변경·검증별 상태·리뷰·남은 작업을 유지. 템플릿과 전송 스크립트의 새 입력 지원을 함께 확인
 - 설치한 템플릿의 프로젝트 루트 기준 경로와 실제 SHA-256을 `.harness-state/state.json`의 `installed_templates`에 기록. 사용자 조정이 끝난 결과의 해시 사용
 - 갱신 시 기록된 해시와 현재 파일이 다르면 사용자 변경으로 보존. 파일 내용이 같을 때만 새 템플릿 적용
 - 워크플로우와 제어 스크립트는 기본 브랜치에서 읽음. 작업 PR이 자동화 코드를 바꿔 실행 절차를 바꾸지 않도록 `.github/workflows/`와 `.github/codex/` 변경은 자동 반영에서 제외하며 별도 수동 검토

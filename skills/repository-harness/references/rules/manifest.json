@@ -3,8 +3,8 @@
   "source": "docs/",
   "files": {
     "main.md": {
-      "source_sha256": "89b7f391bd034792d19e1f7ae23344c414afe642c66b506ea9062c0a7009fbec",
-      "bundled_sha256": "46ad90867a6776d109885258174ce4016cb45e98639781d7251f68c82ce5e8e6"
+      "source_sha256": "516e276e1ad622850f589e91e0d5b73beb0354a53ebfc306c1b3840b6199d936",
+      "bundled_sha256": "1c203bc6ae3f9e82a0e0a514380cdd874856ad72bf834d43d9ccfa8c9e768277"
     },
     "code-base.md": {
       "source_sha256": "7fca3ff0627f2f698f4e2f84999ea47ace79111ae5ccd0447565cbda09eadfc9",
@@ -35,16 +35,16 @@
       "bundled_sha256": "bb1b92085f35a53a255fea003afa405c72a713e28dd0f0e06dec23d2e1cfa941"
     },
     "notifications.md": {
-      "source_sha256": "6e58bee7ec12110fd224ed7dc3f2a5fce487cf42536a38d8b4c85e39d6d2c964",
-      "bundled_sha256": "bc3a275f4a90c6d206d83125284ece14386293ff16f73c02b0350f56ef8c10b5"
+      "source_sha256": "64e1108caa1c8b311a81de5e1aaa3e4c101b3acafb3fb9d65f10906c249c8383",
+      "bundled_sha256": "5fb2ace9e93647539ed71df5b1432098462a0cd371296eea6097008e8ba545d2"
     },
     "codex-subscription.md": {
-      "source_sha256": "b200b810c6a472b26331a53bee6447b68978414f5e5038bcedb04ad9e2c1578a",
-      "bundled_sha256": "685f955d2d7172d7b3d925b9c8081b66823ca48723d803106e4d900388bbcccb"
+      "source_sha256": "589da4155ae0cdf5c7a25fbaa954cdf7fc35764ecaa41b2b9934646e4cb23674",
+      "bundled_sha256": "35fd90b8f8e6eee5100b79501fd4839141e53707a475ee4ecbf6436941331a54"
     },
     "evaluation.md": {
-      "source_sha256": "6f38f1e67f3de0dd000ebd0d5b53ef1e64ee6c16ca5aa75d328623f4d46b5c72",
-      "bundled_sha256": "2c72b7625bdd14631dd82072526ede9040c25ab0212aa5769603c5ab2bd19d0b"
+      "source_sha256": "c6fae3df989cd1f9cbada357ee562954a42fa6a5296c154f8455bf534349bdc5",
+      "bundled_sha256": "3f8504afc95b4a64166a2f6a1294689d5730078753d154ffc3650d8ce624499d"
     }
   }
 }

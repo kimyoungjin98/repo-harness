@@ -8,12 +8,18 @@ const branchPattern = /^feature\/codex-issue-[1-9]\d*$/;
 const bot = { name: 'github-actions[bot]', email: '41898282+github-actions[bot]@users.noreply.github.com' };
 const schema = {
   type: 'object', additionalProperties: false,
-  required: ['status', 'summary', 'validation', 'remaining'],
+  required: ['status', 'summary', 'validation', 'remaining', 'checks', 'review'],
   properties: {
     status: { type: 'string', enum: ['ready', 'blocked'] },
-    summary: { type: 'string' },
-    validation: { type: 'string' },
-    remaining: { type: 'string' },
+    summary: { type: 'string', minLength: 1 },
+    validation: { type: 'string', minLength: 1 },
+    remaining: { type: 'string', minLength: 1 },
+    checks: { type: 'array', minItems: 1, items: {
+      type: 'object', additionalProperties: false, required: ['name', 'status', 'detail'],
+      properties: { name: { type: 'string', minLength: 1 }, detail: { type: 'string', minLength: 1 },
+        status: { type: 'string', enum: ['passed', 'failed', 'not_run', 'not_applicable'] } },
+    } },
+    review: { type: 'array', minItems: 1, items: { type: 'string', minLength: 1 } },
   },
 };
 
@@ -162,7 +168,9 @@ export async function run(github, context, core, environment = process.env) {
       '최신 요청을 기존 코드와 PR 변경에 적용한다. 관련 문서와 작업 이력도 프로젝트 규칙대로 반영한다.',
       `필수 검증 명령: ${environment.CODEX_VERIFY_COMMAND}`,
       '필수 검증 및 변경에 필요한 검증이 모두 통과한 경우에만 status=ready. 정책 질문·검증 불가·실패는 blocked.',
-      'summary에는 변경 내용과 구현 근거, validation에는 실행 명령과 실제 결과, remaining에는 남은 항목을 기록한다.',
+      'summary에는 주요 변경 1~3개와 구현 근거를 줄로 나누어 적고, validation에는 실행 명령과 실제 결과, remaining에는 남은 항목을 기록한다.',
+      'checks에는 검증별 name·status(passed/failed/not_run/not_applicable)·detail을 적는다. 미실행 사유와 비적용 근거를 명시하고 실제 실행한 검증만 통과로 표시한다.',
+      'review에는 사람이 검토할 변경 위치와 확인할 동작을 구체적으로 적는다. 검증 통과만으로 merge나 배포 완료를 주장하지 않는다.',
       JSON.stringify(task.context, null, 2),
     ].join('\n\n');
     execute('codex', ['-a', 'never', 'exec', '--sandbox', 'workspace-write',
@@ -170,6 +178,9 @@ export async function run(github, context, core, environment = process.env) {
       '--output-last-message', resultFile, '-'], worktree, { env: agentEnv, input: prompt, stdio: ['pipe', 'inherit', 'inherit'] });
     const result = JSON.parse(readFileSync(resultFile, 'utf8'));
     if (result.status !== 'ready') throw new Error(`작업 보류\n${result.summary}\n${result.validation}\n${result.remaining}`);
+    if (!Array.isArray(result.checks) || result.checks.some(check => check.status === 'failed')) {
+      throw new Error('검증 실패 또는 검증 보고 누락. PR 반영 보류');
+    }
     if (git('rev-parse', 'HEAD').trim() !== task.sha || git('branch', '--show-current').trim() !== task.target) {
       throw new Error('Codex가 HEAD 또는 작업 브랜치를 변경함');
     }
@@ -186,20 +197,28 @@ export async function run(github, context, core, environment = process.env) {
       // A normal push rejects concurrent remote edits; never force-push.
       execute('git', ['push', 'origin', `HEAD:refs/heads/${task.target}`], worktree, { env: gitEnv });
     }
+    let created = false;
     if (!task.pr && (paths.length || task.remoteExists)) {
       const { data } = await github.rest.pulls.create({ ...context.repo, base: task.base, head: task.target,
         title: `Codex: ${task.issue.title}`, body: `Closes #${task.issue.number}\n\n${body}` });
       task.pr = data;
+      created = true;
     }
     const url = task.pr?.html_url ?? task.issue.html_url;
     await github.rest.issues.createComment({ ...context.repo, issue_number: task.issue.number,
       body: `${task.marker}\n${paths.length ? '작업 반영' : '추가 변경 없음'}: ${url}\n\n${body}` });
     await core.summary.addRaw(`PR 또는 이슈: ${url}\n\n${body}`).write();
     if (task.pr) {
-      const message = join(runtime, 'notification.txt');
-      writeFileSync(message, `PR: ${task.pr.title}\n링크: ${url}\n${body}`);
+      const report = join(runtime, 'notification.json');
+      writeFileSync(report, JSON.stringify({
+        repository: `${context.repo.owner}/${context.repo.repo}`, title: task.pr.title, url,
+        action: created ? 'created' : 'updated', head: task.target, base: task.base,
+        summary: result.summary.split('\n').map(line => line.trim()).filter(Boolean),
+        checks: [...result.checks, { name: environment.CODEX_VERIFY_COMMAND, status: 'passed', detail: 'PR 반영 직전 자동화 재검증 통과' }],
+        review: result.review, remaining: result.remaining.trim() === '없음' ? [] : [result.remaining],
+      }));
       try {
-        execute('node', [join(root, 'scripts/harness-notify.mjs'), '--provider', provider, '--message-file', message], root,
+        execute('node', [join(root, 'scripts/harness-notify.mjs'), '--provider', provider, '--pr-file', report], root,
           { env: environment, stdio: 'inherit' });
       } catch {
         core.setFailed(`PR 반영 성공, 알림 실패: ${url}. 수신 여부 확인 후 수동 재전송 필요`);
