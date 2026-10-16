@@ -27,6 +27,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 프론트엔드가 있으면 [프론트엔드 규칙](./references/rules/code-base/front-end.md)과 [디자인 시스템](./references/rules/code-base/design-system.md)을 읽음
 - 백엔드가 있으면 [백엔드 규칙](./references/rules/code-base/back-end.md)을 읽음
 - 설치 결과 검증 시 [하네스 평가](./references/rules/evaluation.md)의 관련 시나리오 확인
+- 알림 준비와 전송은 [Discord·Slack 알림](./references/rules/notifications.md), 기본 전송 도구는 [알림 스크립트](./scripts/notify.mjs) 참조
 - 대상에 기록할 정보는 [프로젝트 설정 양식](./assets/project.md)을 참고
 - 규칙을 충돌 없이 적용할 수 없는 부분만 사용자에게 확인. 기존 기술과 규칙을 우선한다는 원칙은 질문 없이 적용
 
@@ -37,6 +38,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 스킬이 이미 실행 중이면 현재 사용 가능한 에이전트 정보를 활용. 설치된 스킬의 실행에 Python이나 원본 저장소를 요구하지 않음
 - 필수 연동이 미준비 또는 미확인이면 부족한 항목과 필요한 조치를 모아서 안내하고 준비 대기로 보고. 조사와 기존 문서 확인은 가능하지만 새 하네스 문서와 상태 적용은 보류
 - Webhook의 서비스, 전송 대상, 비밀정보 설정 이름, PR 알림을 실행할 명령·스크립트·자동화 또는 전송 도구를 확인. URL만 있거나 전송 경로가 없으면 미준비로 처리
+- 기존 전송 도구가 없으면 포함된 `scripts/notify.mjs`를 사용. Node.js 20 이상과 환경변수 설정을 확인하고 스킬 내부 경로에서 `--dry-run` 실행. 대상·권한의 확인 근거가 갖춰지면 전송 경로 준비로 기록하고, 필수 연동 확인 후 대상 프로젝트로 복사
 - 설정 근거와 실제 전송 검증 여부를 구분하고, 필수 연동 확인 후 `project.md`에 기록. 설정만 확인한 경우 실제 전송 성공으로 기록하지 않음
 - 준비 상태 확인 중 인증정보와 Webhook URL을 출력하거나 저장하지 않으며, 외부 쓰기나 알림 전송으로 인증을 시험하지 않음
 - 대상의 `AGENTS.md`, 하위 영역의 지침, README, 패키지와 워크스페이스 설정, CI, 테스트 설정, Git 상태를 확인
@@ -65,6 +67,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
     │   └── design-system.md
     ├── test.md
     ├── git-branch.md
+    ├── notifications.md
     ├── document-write.md
     ├── evaluation.md
     ├── overrides/          # 프로젝트별 추가·대체·비적용 규칙이 있을 때 생성
@@ -72,7 +75,9 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
         └── state.json      # 원본 경로와 해시만 기록
 ```
 
-- 원본의 `main.md`, `code-base.md`, `code-base/`, `test.md`, `git-branch.md`, `document-write.md`, `evaluation.md`를 위 구조에 공통 규칙으로 한 벌만 배치. 프로젝트별 조정은 override와 `project.md`에 기록
+- 원본의 `main.md`, `code-base.md`, `code-base/`, `test.md`, `git-branch.md`, `document-write.md`, `notifications.md`, `evaluation.md`를 위 구조에 공통 규칙으로 한 벌만 배치. 프로젝트별 조정은 override와 `project.md`에 기록
+- 기본 알림 도구를 선택하면 이 스킬의 `scripts/notify.mjs`를 대상 프로젝트의 `scripts/harness-notify.mjs`로 복사. 임시 스킬 경로에 의존하지 않도록 실제 프로젝트 경로의 명령을 `project.md`에 기록. 기존 전송 도구를 사용하면 복사하지 않음
+- 기존 목적지 파일은 임의로 덮어쓰지 않으며, 갱신은 [갱신 기준](./references/update.md)의 스크립트 해시 확인 적용
 - 링크 보존을 위해 규칙 문서 묶음을 함께 배치. 적용하지 않는 영역은 `project.md`와 override에 비적용 사유를 기록하고 공통 파일은 수정하지 않음
 - `project.md`에 실제 기술, 영역별 경로와 검증 명령, 기준 브랜치, 문서 위치, 적용하지 않는 규칙, 미확정 항목을 기록
 - 원본 모드(`bundled` 또는 `external`)와 경로를 `project.md`에 기록. 포함된 규칙은 manifest의 해시로 버전을 확인하며, 설치 대상 프로젝트의 Git 커밋을 스킬 버전으로 기록하지 않음. 상태 파일은 [갱신 기준](./references/update.md)에 따라 경로와 해시만 기록. `baseline/`과 `agents-block.md` 등 본문 사본은 생성하지 않음
@@ -107,6 +112,7 @@ description: 기존 마크다운 규칙을 참조하여 대상 프로젝트의 �
 - 프로젝트 설정에 연결된 현재 작업 범위의 override를 함께 읽고 공통 하네스 규칙보다 우선 적용. 대체·비적용된 공통 항목은 적용하지 않고, 지정하지 않은 항목은 공통 규칙을 적용
 - 코드 변경은 [코드 베이스 규칙](./docs/harness/code-base.md), 검증은 [테스트](./docs/harness/test.md), 브랜치 작업은 [브랜치 전략](./docs/harness/git-branch.md)을 적용
 - 작업 이력과 정책 문서는 [문서작성](./docs/harness/document-write.md) 규칙을 적용
+- PR 알림은 [알림 규칙](./docs/harness/notifications.md)과 프로젝트 설정의 실제 전송 명령을 사용
 - 사용자 요청과 기존 프로젝트 규칙을 우선하고, 현재 작업에 필요한 단계만 진행
 <!-- repository-harness:end -->
 ```

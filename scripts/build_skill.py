@@ -18,6 +18,7 @@ SOURCES = (
     "test.md",
     "git-branch.md",
     "document-write.md",
+    "notifications.md",
     "evaluation.md",
 )
 OUTPUT = ROOT / "skills/repository-harness/references/rules"

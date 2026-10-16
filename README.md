@@ -2,6 +2,8 @@
 
 프로젝트의 기존 기술과 규칙을 분석하여 AGENTS.md와 하네스 문서를 구성하는 스킬.
 
+개발자는 업무를 요청하고 PR을 검토한다. 에이전트는 정해진 권한 안에서 구현·검증·커밋·push·PR 작성까지 진행하며, 이미 허용된 작업을 단계마다 다시 묻지 않는다. 프로젝트별 규칙을 우선하고 merge와 배포는 별도 요청으로 처리한다. 상세 기준은 [목표와 작업 권한](./docs/main.md#목표와-작업-권한) 참고.
+
 ## 준비물
 
 - 설치 : Node.js와 npm/npx, Git CLI, 저장소에 접근 가능한 네트워크
@@ -61,6 +63,22 @@ $repository-harness 최신 규칙으로 하네스를 갱신하고 프로젝트�
 
 구형 설치는 프로젝트별 수정 보존을 확인한 뒤 기준 사본을 제거하는 구조로 전환한다. 스킬 업데이트만으로 대상 프로젝트의 기존 파일이 변경되는 것은 아니다.
 
+## Discord·Slack 알림
+
+[공용 전송 스크립트](./skills/repository-harness/scripts/notify.mjs)가 스킬에 포함된다. 기존 전송 도구가 없으면 하네스 구성 시 `scripts/harness-notify.mjs`로 배치한다. Node.js 20 이상이 필요하며 추가 패키지 설치는 없다.
+
+선택한 서비스의 `DISCORD_WEBHOOK_URL` 또는 `SLACK_WEBHOOK_URL`을 실행 환경에 설정한 뒤 대상 프로젝트에서 사용한다. `.env`는 자동으로 읽지 않는다.
+
+```bash
+# 설정 검사만 수행 (Slack은 --provider slack)
+node scripts/harness-notify.mjs --provider discord --message "설정 확인" --dry-run
+
+# 실제 메시지 전송
+node scripts/harness-notify.mjs --provider discord --message-file /tmp/pr-notification.txt
+```
+
+본문 작성, 사용자 지정 환경변수, 실패 처리는 [알림 사용법](./docs/notifications.md) 참고. 설정 검사와 실제 수신 성공은 구분한다.
+
 ## 기획과 스킬 수정
 
 - 기획·규칙 원본 : [docs/main.md](./docs/main.md)와 `docs/`의 관련 문서
@@ -73,6 +91,7 @@ $repository-harness 최신 규칙으로 하네스를 갱신하고 프로젝트�
 ```bash
 python3 scripts/build_skill.py
 python3 scripts/build_skill.py --check
+node tests/notify.test.mjs
 ```
 
 `docs/`와 생성된 규칙을 함께 커밋하여 원격 저장소에 반영한다. 설치 시 빌드를 실행하지 않으므로 생성 파일도 저장소에 포함해야 한다.
