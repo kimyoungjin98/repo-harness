@@ -102,6 +102,8 @@ OpenAI API 키 없이 구독으로 로그인한 Codex CLI를 사용하는 [재�
 
 하네스 최초 구성 시 자동화를 함께 구성할지 묻고, 사용자가 선택하면 같은 작업에서 바로 구성한다. 갱신 시 기록된 선택을 유지하며 선택 기록이 없으면 사용 여부를 확인한다. 배치할 파일, 러너 로그인, GitHub Variables·Secrets와 적용 검증은 [구독 자동화 사용법](./docs/codex-subscription.md) 참고. 스킬 설치만으로 자동 실행되지는 않는다.
 
+구독 자동화는 [프로젝트 설정 양식](./skills/repository-harness/assets/codex-subscription/project.example.json)으로 기존 서버의 CLI·인증·러너·검증 환경을 연결한다. 최초 발행 정책을 확정하고 기존 정책은 보존한다. 구현·검증·push·PR·댓글·알림 상태를 나누며, 선택한 정책에 따라 검증 미완료 변경을 Draft PR로 전달할 수 있다. Draft 전달은 검증 통과나 작업 완료와 구분하며, push 이후 전달 실패는 보존 기록으로 복구한다. 상세 기준은 [자동화 안내](./docs/codex-subscription.md) 참고.
+
 ## 기획과 스킬 수정
 
 - 기획·규칙 원본 : [docs/main.md](./docs/main.md)와 `docs/`의 관련 문서
