@@ -95,6 +95,45 @@ fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], JSON.stringify
   return { root, remote, home, runnerTemp, directory, issue, context, github, core, state, environment };
 }
 
+test('테스트 항목 없는 기능 요청도 모델에 테스트 작성·실행 지침과 함께 전달', async t => {
+  const s = setup(t);
+  s.issue.body = '게시글 저장 기능을 구현해줘';
+  const stateRoot = join(s.directory, 'state');
+  const workRoot = join(s.directory, 'work');
+  mkdirSync(stateRoot); mkdirSync(workRoot);
+  const configPath = join(s.directory, 'config.json');
+  writeFileSync(configPath, JSON.stringify({
+    publicationPolicy: 'verified-only', baseBranch: 'main', branchPrefix: 'feature/codex-',
+    authHome: s.home, codexExecutable: join(s.directory, 'bin/codex'), stateRoot, workRoot,
+    toolChecks: [['node', '--version']],
+    sandboxProbe: ['sandbox', 'linux', '--config', 'sandbox_mode="workspace-write"', '--', 'true'],
+    verifyCommand: 'test -f README.md', notifyScript: 'scripts/harness-notify.mjs',
+    notifyProvider: 'discord', webhookEnv: 'DISCORD_WEBHOOK_URL',
+    testEnvironment: { PROMPT_CAPTURE: s.environment.PROMPT_CAPTURE },
+  }));
+  writeFileSync(join(s.directory, 'bin/codex'), `#!/usr/bin/env node
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args.includes('--version')) { fs.writeSync(1, 'codex-cli 1.0.0\\n'); process.exit(0); }
+if (!args.includes('exec')) process.exit(0);
+fs.writeFileSync(process.env.PROMPT_CAPTURE, fs.readFileSync(0, 'utf8'));
+// Stop after delivery to the model; no generated code or external publication.
+fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], JSON.stringify({
+  safety:'safe',status:'blocked',summary:'prompt captured',validation:'not run',remaining:'mock model',
+  checks:[{name:'mock',status:'not_run',detail:'prompt delivery only'}],review:['prompt']
+}));
+`);
+  await run(s.github, s.context, s.core, { ...s.environment, CODEX_AUTOMATION_CONFIG: configPath });
+  assert.ok(existsSync(s.environment.PROMPT_CAPTURE), s.state.failures.join('\n'));
+  const prompt = readFileSync(s.environment.PROMPT_CAPTURE, 'utf8');
+  assert.match(prompt, /게시글 저장 기능을 구현해줘/);
+  assert.match(prompt, /관련 테스트 코드를 작성·수정하고 실행/);
+  assert.match(prompt, /테스트 내용을 지정하지 않았으면 요청한 작업과 기대 동작에서 시나리오를 도출/);
+  assert.match(prompt, /사용자·프로젝트의 명시적인 제한과 문서·단순 스타일 검증 기준/);
+  assert.doesNotMatch(prompt, /테스트 코드는 사용자 요청 없이 생성·추가하지 않는다/);
+  assert.equal(s.state.created.length, 0);
+});
+
 test('공개 저장소·봇·일반 코멘트·읽기 권한 요청을 거부', async t => {
   const s = setup(t);
   assert.equal(await authorize(s.github, s.context), true);
